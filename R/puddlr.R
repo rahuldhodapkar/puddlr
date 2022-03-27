@@ -1,5 +1,5 @@
 # puddlr.R
-#     Copyright (C) 2021  Rahul Dhodapkar
+#     Copyright (C) 2022  Rahul Dhodapkar
 #
 #     This program is free software: you can redistribute it and/or modify
 #     it under the terms of the GNU Affero General Public License as
@@ -90,7 +90,7 @@ NormalizePredictors <- function(puddlr,
 
 #' Pretty print details of puddlr object
 #'
-#' @param puddlr A puddlr object to normalize in-place
+#' @param puddlr A puddlr object
 #'
 #' @return NULL
 #'
