@@ -1,0 +1,5 @@
+# build utilities
+Makefile
+
+# code to run vignettes as interactive integrated testing
+vignettes

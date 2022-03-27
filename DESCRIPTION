@@ -1,0 +1,20 @@
+Package: puddlr
+Version: 0.1.0.9000
+Title: Analysis Tools for Shallow Datasets
+Authors@R: 
+    person(given = "Rahul",
+           family = "Dhodapkar",
+           role = c("aut", "cre"),
+           email = "rahul.dhodapkar@yale.edu",
+           comment = c(ORCID = "0000-0002-2014-7515"))
+Description: A set of functions to enable valid exploration of data sets
+    with relatively few observations and many features ("shallow" and "wide")
+Depends: R (>= 3.5.0)
+License: AGPL-3 | file LICENSE
+Encoding: UTF-8
+LazyData: true
+Imports:
+    ggplot2
+Suggests:
+    testthat
+RoxygenNote: 7.1.2
