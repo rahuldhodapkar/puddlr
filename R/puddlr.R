@@ -172,7 +172,9 @@ NormalizePredictors <- function(puddlr,
 RunPCA <- function(puddlr, center=TRUE, scale=TRUE) {
     pca <- prcomp(x=puddlr$predictors, center = center, scale = scale)
 
-    puddlr$reductions <- list()
+    if (is.null(puddlr$reductions)) {
+        puddlr$reductions <- list()
+    }
     puddlr$reductions$pca <- list()
 
     puddlr$reductions$pca$embedding <- pca$x
@@ -180,6 +182,35 @@ RunPCA <- function(puddlr, center=TRUE, scale=TRUE) {
 
     puddlr$reductions$pca$misc <- list()
     puddlr$reductions$pca$misc$sdev <- pca$sdev
+
+    return(puddlr)
+}
+
+#' Runs ICA for linear dimensionality reduction on the predictors of a 
+#' normalized puddlr object
+#'
+#' @param puddlr    A puddlr object
+#' @param nc        number of components to extract. Default = 20
+#'
+#' @return puddlr object with pca reduction
+#'
+#' @importFrom ica icafast
+#'
+#' @rdname RunICA
+#' @export RunICA
+#'
+RunICA <- function(puddlr, nc=20) {
+    ica <- icafast(X=puddlr$predictors, nc=nc)
+
+    t(ica$Q) %*% ica$R
+
+    if (is.null(puddlr$reductions)) {
+        puddlr$reductions <- list()
+    }
+    puddlr$reductions$ica <- list()
+
+    puddlr$reductions$ica$embedding <- ica$S
+    puddlr$reductions$ica$rotation <- t(ica$Q) %*% ica$R
 
     return(puddlr)
 }
@@ -252,7 +283,7 @@ RunGLM <- function(puddlr,
 
     stats.df <- data.frame(
         VariableName = names(sum.feature.var),
-        GLMEstimate = sum.feature.estimate[ names(sum.feature.var) ],
+        GLMEstimate = sum.feature.estimate,
         StdErr = sqrt( sum.feature.var )
     )
     stats.df$ZScore <- stats.df$GLMEstimate / stats.df$StdErr
@@ -319,11 +350,9 @@ ScanComponentsSubset <- function(puddlr,
             # train data
             train.puddlr <- puddlr
             train.puddlr$reductions[[reduction]]$rotation <- (
-                train.puddlr$reductions[[reduction]]$rotation[,train.ixs])
+                train.puddlr$reductions[[reduction]]$rotation)
             train.puddlr$reductions[[reduction]]$embedding <- (
                 train.puddlr$reductions[[reduction]]$embedding[train.ixs,])
-            train.puddlr$reductions[[reduction]]$sdev <- (
-                train.puddlr$reductions[[reduction]]$sdev[train.ixs])
 
             train.puddlr$predictors <- (train.puddlr$predictors[train.ixs,])
             train.puddlr$response <- (train.puddlr$response[train.ixs])
@@ -331,11 +360,9 @@ ScanComponentsSubset <- function(puddlr,
             # test data
             test.puddlr <- puddlr
             test.puddlr$reductions[[reduction]]$rotation <- (
-                test.puddlr$reductions[[reduction]]$rotation[,test.ixs])
+                test.puddlr$reductions[[reduction]]$rotation)
             test.puddlr$reductions[[reduction]]$embedding <- (
                 test.puddlr$reductions[[reduction]]$embedding[test.ixs,])
-            test.puddlr$reductions[[reduction]]$sdev <- (
-                test.puddlr$reductions[[reduction]]$sdev[test.ixs])
 
             test.puddlr$predictors <- (test.puddlr$predictors[test.ixs,])
             test.puddlr$response <- (test.puddlr$response[test.ixs])
@@ -343,7 +370,7 @@ ScanComponentsSubset <- function(puddlr,
             train.puddlr <- RunGLM(train.puddlr, 
                  formula=y ~ .,
                  family=binomial(link='logit'),
-                 reduction='pca',
+                 reduction=reduction,
                  n.components=n.components,
                  adj.rsq=FALSE)
             y.pred <- predict(train.puddlr$model$obj, 
