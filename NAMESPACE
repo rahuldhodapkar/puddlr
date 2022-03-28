@@ -2,4 +2,8 @@
 
 export(CreatePuddlrObject)
 export(NormalizePredictors)
-importFrom(stats,na.omit)
+export(RunGLM)
+export(RunPCA)
+export(rsq.v)
+importFrom(rsq,vresidual)
+importFrom(stats,prcomp)

@@ -16,7 +16,7 @@ NormalizePredictors(puddlr, scale = TRUE, center = TRUE, max.na.ratio = 0.5)
 \item{center}{whether to center predictor matrix}
 
 \item{max.na.ratio}{exclude predictors where the percent of NA observations
-exceeds \code{max.na.ratio}. Default = \code{0.5}.}
+is \code{> max.na.ratio}. Default = \code{0.5}.}
 }
 \value{
 A normalized puddlr object
