@@ -5,10 +5,14 @@
 \title{Runs PCA for linear dimensionality reduction on the predictors of a 
 normalized puddlr object}
 \usage{
-RunPCA(puddlr)
+RunPCA(puddlr, center = TRUE, scale = TRUE)
 }
 \arguments{
 \item{puddlr}{A puddlr object}
+
+\item{center}{whether to zero-center}
+
+\item{scale}{whether to center data to unit variance}
 }
 \value{
 puddlr object with pca reduction

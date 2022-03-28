@@ -132,7 +132,7 @@ NormalizePredictors <- function(puddlr,
 
     na.columns <- ((
             colSums(is.na(puddlr$raw.predictors)) / nrow(puddlr$raw.predictors)
-        ) > max.na.ratio)
+        ) >= max.na.ratio)
 
     puddlr$predictors <- puddlr$raw.predictors[,!na.columns]
 
@@ -159,6 +159,8 @@ NormalizePredictors <- function(puddlr,
 #' normalized puddlr object
 #'
 #' @param puddlr    A puddlr object
+#' @param center    whether to zero-center
+#' @param scale     whether to center data to unit variance
 #'
 #' @return puddlr object with pca reduction
 #'
@@ -167,15 +169,17 @@ NormalizePredictors <- function(puddlr,
 #' @rdname RunPCA
 #' @export RunPCA
 #'
-RunPCA <- function(puddlr) {
-    pca <- prcomp(x=puddlr$predictors)
+RunPCA <- function(puddlr, center=TRUE, scale=TRUE) {
+    pca <- prcomp(x=puddlr$predictors, center = center, scale = scale)
 
     puddlr$reductions <- list()
     puddlr$reductions$pca <- list()
 
     puddlr$reductions$pca$embedding <- pca$x
     puddlr$reductions$pca$rotation <- pca$rotation
-    puddlr$reductions$pca$sdev <- pca$sdev
+
+    puddlr$reductions$pca$misc <- list()
+    puddlr$reductions$pca$misc$sdev <- pca$sdev
 
     return(puddlr)
 }
@@ -255,6 +259,143 @@ RunGLM <- function(puddlr,
     stats.df$PValue <- 2*pnorm(-abs(stats.df$ZScore))
 
     puddlr$model$df <- stats.df
+
+    return(puddlr)
+}
+
+#' ScanComponentsSubset 
+#'
+#' @param puddlr    A puddlr object
+#' @param n.to.scan.vec Vector of possible values for n.components to scan for
+#'                  GLM fitting.
+#' @param k.cross   number of train-test splits. (corresponds to k-fold cross
+#'                  validation).  Default = 7.
+#' @param rand.seed random seed for cross validation split, default=42.
+#' @param formula   an object of class "formula" (or one that can be coerced to
+#'                  that class): a symbolic description of the model to be 
+#'                  fitted. The details of model specification can be found 
+#'                  under `glm`.  The name of the response variable in the
+#'                  formula will be used to name the response variable.
+#' @param family    a description of the error distribution and link function
+#'                  to be used in the model.  Passed to the argument of the
+#'                  same name under `glm`.
+#' @param reduction a string specifying the linear dimensionality reduction to
+#'                  use. Valid options are \code{'pca'}.  Default = \code{'pca'}
+#' @param adj.rsq   boolean flag specifying whether to adjust the pseudo-R^2
+#'                  goodness-of-fit calculated value.
+#'
+#' @return puddlr object with scanned n components by rsq plot.
+#'
+#' @importFrom caret trainControl
+#'
+#' @rdname ScanComponentsSubset
+#' @export ScanComponentsSubset
+#'
+ScanComponentsSubset <- function(puddlr,
+                                 n.to.scan.vec,
+                                 k.cross = 7,
+                                 rand.seed = 42,
+                                 formula,
+                                 family,
+                                 reduction,
+                                 adj.rsq) {
+    set.seed(rand.seed)
+
+    avg.train.rsq <- c()
+    avg.rmse <- c()
+    for(n.components in n.to.scan.vec) {
+        print(paste0("Testing with [", 
+                         as.character(n.components) ,"] components"))
+        #Create equally size folds
+        folds <- cut(sample(1:length(puddlr$response)),breaks=k.cross,labels=FALSE)
+        #Perform k-fold cross validation
+        rmse.values <- c()
+        rsq.values <- c()
+        for(k.i in 1:k.cross){
+            #Segement data by fold
+            test.ixs <- which(folds==k.i,arr.ind=TRUE)
+            train.ixs <- which(folds!=k.i,arr.ind=TRUE)
+
+            # train data
+            train.puddlr <- puddlr
+            train.puddlr$reductions[[reduction]]$rotation <- (
+                train.puddlr$reductions[[reduction]]$rotation[,train.ixs])
+            train.puddlr$reductions[[reduction]]$embedding <- (
+                train.puddlr$reductions[[reduction]]$embedding[train.ixs,])
+            train.puddlr$reductions[[reduction]]$sdev <- (
+                train.puddlr$reductions[[reduction]]$sdev[train.ixs])
+
+            train.puddlr$predictors <- (train.puddlr$predictors[train.ixs,])
+            train.puddlr$response <- (train.puddlr$response[train.ixs])
+
+            # test data
+            test.puddlr <- puddlr
+            test.puddlr$reductions[[reduction]]$rotation <- (
+                test.puddlr$reductions[[reduction]]$rotation[,test.ixs])
+            test.puddlr$reductions[[reduction]]$embedding <- (
+                test.puddlr$reductions[[reduction]]$embedding[test.ixs,])
+            test.puddlr$reductions[[reduction]]$sdev <- (
+                test.puddlr$reductions[[reduction]]$sdev[test.ixs])
+
+            test.puddlr$predictors <- (test.puddlr$predictors[test.ixs,])
+            test.puddlr$response <- (test.puddlr$response[test.ixs])
+
+            train.puddlr <- RunGLM(train.puddlr, 
+                 formula=y ~ .,
+                 family=binomial(link='logit'),
+                 reduction='pca',
+                 n.components=n.components,
+                 adj.rsq=FALSE)
+            y.pred <- predict(train.puddlr$model$obj, 
+                data.frame(test.puddlr$reductions[[reduction]]$embedding))
+            rmse.values <- c(rmse.values, 
+                sqrt(mean((test.puddlr$response - y.pred)^2)))
+            rsq.values <- c(rsq.values, train.puddlr$model$rsq)
+        }
+        avg.rmse <- c(avg.rmse, mean(rmse.values))
+        avg.train.rsq <- c(avg.train.rsq, mean(rsq.values))
+    }
+
+    if (is.null(puddlr$optimization)) {
+        puddlr$optimization <- list()
+    }
+
+    local.optim.df <- data.frame(
+        n.components = n.to.scan.vec,
+        family = family$family,
+        reduction = reduction,
+        k.folds = k.cross,
+        rmse = avg.rmse,
+        avg.train.rsq = avg.train.rsq
+    )
+
+    if (is.null(puddlr$optimization$n.components.scan.df)) {
+        puddlr$optimization$n.components.scan.df <- local.optim.df
+    } else {
+        for (i in 1:nrow(local.optim.df)) {
+            matching.ix <- which(
+                (puddlr$optimization$n.components.scan.df$n.components
+                    == local.optim.df$n.components[[i]])
+                & (puddlr$optimization$n.components.scan.df$family
+                    == local.optim.df$family[[i]])
+                & (puddlr$optimization$n.components.scan.df$reduction
+                    == local.optim.df$reduction[[i]])
+                & (puddlr$optimization$n.components.scan.df$k.folds
+                    == local.optim.df$k.folds[[i]])
+            )
+            if (length(matching.ix) == 0) {
+                puddlr$optimization$n.components.scan.df <- rbind(
+                    puddlr$optimization$n.components.scan.df,
+                    local.optim.df[i,]
+                )
+            } else if (length(matching.ix) == 1) {
+                puddlr$optimization$n.components.scan.df[matching.ix,] <- (
+                    local.optim.df[i,])
+            } else {
+                warning('WARN:ScanComponentsSubset:: encountered illegal df contents.')
+            }
+        }
+    }
 
     return(puddlr)
 }

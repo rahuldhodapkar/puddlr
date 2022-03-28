@@ -47,7 +47,7 @@ test_that("Test PCA", {
     expect_equal(class(puddlr.obj), 'puddlr')
 })
 
-test_that("Test PCA", {
+test_that("Test 'ScanComponentsSubset'", {
     set.seed(42)
 
     response.test <- sample(c(0,1), size=100, replace=TRUE)
@@ -69,6 +69,24 @@ test_that("Test PCA", {
                          reduction='pca',
                          n.components=3,
                          adj.rsq=FALSE)
+    puddlr.obj <- ScanComponentsSubset(puddlr.obj,
+                         n.to.scan.vec=3:5,
+                         k.cross=7,
+                         formula=y ~ .,
+                         family=binomial(link='logit'),
+                         reduction='pca',
+                         adj.rsq=FALSE)
+    expect_equal(nrow(puddlr.obj$optimization$n.components.scan.df), 3)
+
+    puddlr.obj <- ScanComponentsSubset(puddlr.obj,
+                         n.to.scan.vec=3:7,
+                         k.cross=7,
+                         formula=y ~ .,
+                         family=binomial(link='logit'),
+                         reduction='pca',
+                         adj.rsq=FALSE)
+    expect_equal(nrow(puddlr.obj$optimization$n.components.scan.df), 5)
 
     expect_equal(class(puddlr.obj), 'puddlr')
 })
+
