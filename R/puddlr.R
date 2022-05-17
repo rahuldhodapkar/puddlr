@@ -90,6 +90,74 @@ NormalizePredictors <- function(puddlr,
     return(puddlr)
 }
 
+#' Calculates dispersion of predictors
+#'
+#' @param puddlr A puddlr object to calculate dispersion of predictors
+#' @param dispersion.measure whether to scale predictor matrix. Default
+#'               value = 'MAD' (Median Absolute Deviation).
+#'
+#' @return A puddlr object with dispersion calculated and stored in the
+#'         'predictor.meta' attribute.
+#'
+#' @rdname CalculatePredictorDispersion
+#' @export CalculatePredictorDispersion
+#'
+CalculatePredictorDispersion <- function(puddlr,
+                                         dispersion.measure='MAD') {
+
+    if (!"predictors" %in% attributes(puddlr)$names) {
+        stop('ERROR: cannot run "CalculatePredictorDispersion" without first running "NormalizePredictors".')
+    }
+
+    if (dispersion.measure == 'MAD') {
+        dispersion.estimates <- apply(X=puddlr$predictors, MARGIN=2, FUN=mad, na.rm=TRUE)
+    } else {
+        stop(paste0('ERROR: invalid "dispersion.measure [', dispersion.measure, '] provided.'))
+    }
+
+    if (!"predictor.meta" %in% attributes(puddlr)$names) {
+        puddlr$predictor.meta <- data.frame(
+            predictor.name = colnames(puddlr$predictors)
+        )
+    }
+    puddlr$predictor.meta[,dispersion.measure] <- dispersion.estimates
+
+    return(puddlr)
+}
+
+#' Masks normalized predictors from downstream analysis, either by a character
+#' vector of predictor names, or a boolean vector where TRUE indicates that a
+#' predictor should be masked.  Masking predictors will remove all
+#' dimensionality reductions from a puddlr object, and these will need to be
+#' re-computed if required.
+#'
+#' @param puddlr A puddlr object to calculate dispersion of predictors
+#' @param predictors.to.keep either a character vevtor or boolean vector containing
+#'                           which predictors to keep. Indexed from the
+#'                           "predictors" attribute
+#'
+#' @return A puddlr object with predictors masked. The "raw.predictors"
+#'         attribute will remain unchanged.
+#'
+#' @rdname MaskPredictors
+#' @export MaskPredictors
+#'
+MaskPredictors <- function(puddlr, cols.to.keep) {
+
+    if (!"predictors" %in% attributes(puddlr)$names) {
+        stop('ERROR: cannot run "CalculatePredictorDispersion" without first running "NormalizePredictors".')
+    }
+
+    # remove predictor-dependent attributes
+    attr(puddlr, 'predictor.meta') <- NULL
+    attr(puddlr, 'reductions') <- NULL
+
+    # perform predictor selection
+    puddlr$predictors <- puddlr$predictors[,cols.to.keep]
+
+    return(puddlr)
+}
+
 #'
 #' Runs PCA for linear dimensionality reduction on the predictors of a 
 #' normalized puddlr object
