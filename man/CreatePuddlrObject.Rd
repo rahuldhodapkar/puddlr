@@ -7,7 +7,12 @@
 CreatePuddlrObject(response, predictors)
 }
 \arguments{
-\item{response}{vector of observed values for the response variable}
+\item{response}{vector of observed values for the response variable.
+the response variable type must be compatible with the
+`glm` family expected.  For example, for binomial (logistic)
+regression, response should be a factor, while for
+gaussian (ordinary least squares), response should be a
+numeric vector.}
 
 \item{predictors}{matrix of predictors, formatted as observations (rows)
 by variables (columns)}

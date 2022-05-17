@@ -16,7 +16,7 @@ LazyData: true
 Imports:
     ggplot2,
     pscl,
-    rsq
+    DescTools
 Suggests:
     testthat
 RoxygenNote: 7.1.2

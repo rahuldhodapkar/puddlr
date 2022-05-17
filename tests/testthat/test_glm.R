@@ -47,7 +47,35 @@ test_that("Test PCA", {
     expect_equal(class(puddlr.obj), 'puddlr')
 })
 
-test_that("Test 'ScanComponentsSubset'", {
+test_that("Test 'gaussian' GLM", {
+    response.test <- c(0.3, 0.1, 2.2, 4.3)
+    predictors.test <- matrix(c( 1, 2, 3, 4, 
+                                 4, 3, 2, 1, 
+                                 0, 3, 1, 0, 
+                                 0.5, 1, 2, 1,
+                                 5, 6, 5, 1,
+                                 10, 20, 30, 40),
+                              nrow=4, ncol=6)
+
+    rownames(predictors.test) <- paste0('r', 1:nrow(predictors.test))
+    colnames(predictors.test) <- paste0('c', 1:ncol(predictors.test))
+
+    puddlr.obj <- CreatePuddlrObject(
+        response = response.test,
+        predictors = predictors.test
+    )
+    puddlr.obj <- NormalizePredictors(puddlr.obj)
+    puddlr.obj <- RunPCA(puddlr.obj)
+    puddlr.obj <- RunGLM(puddlr.obj, 
+                         formula=response ~ .,
+                         family=gaussian(link='identity'),
+                         reduction='pca',
+                         n.components=3)
+
+    expect_equal(class(puddlr.obj), 'puddlr')
+})
+
+test_that("Test 'ScanComponentsSubset' with 'binomial' GLM", {
     set.seed(42)
 
     response.test <- sample(c(0,1), size=100, replace=TRUE)
@@ -89,4 +117,5 @@ test_that("Test 'ScanComponentsSubset'", {
 
     expect_equal(class(puddlr.obj), 'puddlr')
 })
+
 

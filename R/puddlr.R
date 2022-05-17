@@ -18,78 +18,14 @@
 ##
 ################################################################################
 
-#' forked from rsq package.
-#' Zhang (2017): variance-function-based R-squared.
-#'
-#' @param fitObj glm or lm object to calculate R-squared for
-#' @param adj whether to adjust R-squared value.
-#'
-#' @return A normalized puddlr object
-#'
-#' @importFrom rsq vresidual
-#'
-#' @rdname rsq.v
-#' @export rsq.v
-#'
-rsq.v <- function(fitObj,adj=FALSE)
-{
-    y <- fitObj$y
-    wt <- weights(fitObj)
-    if( is.null(wt) )
-      wt <- y*0+1
-
-    n <- sum(wt)
-    if(is.null(y)) stop("The glm object does not include response values!")
-    yfit <- fitObj$fitted.values
-
-    if(pmatch("Negative Binomial",family(fitObj)$family,nomatch=F))
-    {
-      theta <- ifelse(is.null(fitObj$theta),
-                      as.numeric(gsub("(?<=\\()[^()]*(?=\\))(*SKIP)(*F)|.","",
-                                      family(fitObj)$family, perl=T)), fitObj$theta)
-      sse1 <- sum(wt*vresidual(y,yfit,family=negative.binomial(theta))^2)
-      
-      #y <- model.response(fitObj$model)
-      f0 <- glm(y~1,family=negative.binomial(theta))
-      yf0 <- f0$fitted.values
-      sse0 <- sum(wt*vresidual(y,yf0,family=negative.binomial(theta))^2)
-    }
-    else if(family(fitObj)$family=="binomial")
-    {
-      nSuc <- wt*y
-      nFai <- wt-nSuc
-      tone <- rep(1,length(nSuc))
-      sse1 <- sum(nSuc*vresidual(tone,yfit,family=family(fitObj))^2)+
-        sum(nFai*vresidual(1-tone,yfit,family=family(fitObj))^2)
-      
-      #f0 <- update(fitObj,.~1,data=data)
-      f0 <- update(fitObj,.~1, family=fitObj$family, data=fitObj$data)
-      yf0 <- f0$fitted.values
-      sse0 <- sum(nSuc*vresidual(tone,yf0,family=family(f0))^2)+
-                sum(nFai*vresidual(1-tone,yf0,family=family(f0))^2)
-    }
-    else
-    {
-      sse1 <- sum(wt*vresidual(y,yfit,family=family(fitObj))^2)
-      
-      f0 <- update(fitObj,.~1)
-      sse0 <- sum(wt*vresidual(y,f0$fitted.values,family=family(f0))^2)
-    }
-
-    #rsq <- 1-(sse1/sse0)*ifelse(adj,f0$df.residual/fitObj$df.residual,1)
-    pM <- fitObj$df.null-fitObj$df.residual+1
-    rsq <- 1-(sse1/sse0)*ifelse(adj,(n-1)/(n-pM),1)
-
-    rsq
-}
-
-################################################################################
-##
-################################################################################
-
 #' Create Puddlr object
 #'
-#' @param response vector of observed values for the response variable
+#' @param response vector of observed values for the response variable.
+#'                 the response variable type must be compatible with the
+#'                 `glm` family expected.  For example, for binomial (logistic)
+#'                 regression, response should be a factor, while for
+#'                 gaussian (ordinary least squares), response should be a
+#'                 numeric vector.
 #' @param predictors matrix of predictors, formatted as observations (rows)
 #'                   by variables (columns)
 #'
@@ -236,6 +172,8 @@ RunICA <- function(puddlr, nc=20) {
 #'
 #' @return puddlr object with glm
 #'
+#' @importFrom DescTools PseudoR2
+#'
 #' @rdname RunGLM
 #' @export RunGLM
 #'
@@ -249,7 +187,7 @@ RunGLM <- function(puddlr,
     response.var.name <- all.vars(formula)[1]
 
     data.df <- data.frame(puddlr$reductions[[reduction]]$embedding[,1:n.components])
-    data.df[,response.var.name] <- as.factor(puddlr$response)
+    data.df[,response.var.name] <- puddlr$response
 
     puddlr$model <- list()
 
@@ -258,9 +196,8 @@ RunGLM <- function(puddlr,
       family = family,
       data = data.df
     )
-    # *** TODO *** bug with rsq package
-    puddlr$model$rsq <- rsq.v(puddlr$model$obj, adj=adj.rsq)
-    #puddlr$model$rsq <- pR2(puddlr$model$obj)['McFadden']
+
+    puddlr$model$rsq <- PseudoR2(puddlr$model$obj, which='McFadden')
 
     # project back to original feature space
     sum.feature.estimate <- (
@@ -369,7 +306,7 @@ ScanComponentsSubset <- function(puddlr,
 
             train.puddlr <- RunGLM(train.puddlr, 
                  formula=y ~ .,
-                 family=binomial(link='logit'),
+                 family=family,
                  reduction=reduction,
                  n.components=n.components,
                  adj.rsq=FALSE)
