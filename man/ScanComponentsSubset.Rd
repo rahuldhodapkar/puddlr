@@ -2,7 +2,12 @@
 % Please edit documentation in R/puddlr.R
 \name{ScanComponentsSubset}
 \alias{ScanComponentsSubset}
-\title{ScanComponentsSubset}
+\title{Iteratively runs GLM fitting on a set number of components to identify the
+appropriate number of dimensions to restrict the model to.  Performs k-fold
+cross validation to assess for overfitting with averaged root mean squared
+error, and pseudo-R squared (McFadden's) to assess for goodness of fit.
+Data for the search are saved in the puddlr object for later plotting and
+visual inspection}
 \usage{
 ScanComponentsSubset(
   puddlr,
@@ -46,5 +51,10 @@ goodness-of-fit calculated value.}
 puddlr object with scanned n components by rsq plot.
 }
 \description{
-ScanComponentsSubset
+Iteratively runs GLM fitting on a set number of components to identify the
+appropriate number of dimensions to restrict the model to.  Performs k-fold
+cross validation to assess for overfitting with averaged root mean squared
+error, and pseudo-R squared (McFadden's) to assess for goodness of fit.
+Data for the search are saved in the puddlr object for later plotting and
+visual inspection
 }

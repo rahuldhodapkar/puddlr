@@ -2,7 +2,7 @@
 % Please edit documentation in R/puddlr.R
 \name{CreatePuddlrObject}
 \alias{CreatePuddlrObject}
-\title{Create Puddlr object}
+\title{Create a 'puddlr' object.}
 \usage{
 CreatePuddlrObject(response, predictors)
 }
@@ -21,5 +21,5 @@ by variables (columns)}
 a Puddlr object
 }
 \description{
-Create Puddlr object
+Create a 'puddlr' object.
 }

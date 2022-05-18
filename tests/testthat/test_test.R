@@ -15,7 +15,7 @@
 #     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 context("Test testing infrastructure")
-library(crules)
+library(puddlr)
 
 test_that("Test that the testing system is functional", {
   expect_equal(1, 1)

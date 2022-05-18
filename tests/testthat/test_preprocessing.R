@@ -17,6 +17,7 @@
 
 context("Test data transformations")
 library(puddlr)
+library(stringr)
 
 test_that("Test 'puddlr' constructor", {
     response.test <- c(1,0,1,1)

@@ -18,7 +18,7 @@
 ##
 ################################################################################
 
-#' Create Puddlr object
+#' Create a 'puddlr' object.
 #'
 #' @param response vector of observed values for the response variable.
 #'                 the response variable type must be compatible with the
@@ -90,7 +90,8 @@ NormalizePredictors <- function(puddlr,
     return(puddlr)
 }
 
-#' Calculates dispersion of predictors
+#' Calculates dispersion of predictors, using supplied measures.  Defaults to
+#' using median absolute deviation (MAD).
 #'
 #' @param puddlr A puddlr object to calculate dispersion of predictors
 #' @param dispersion.measure whether to scale predictor matrix. Default
@@ -98,6 +99,8 @@ NormalizePredictors <- function(puddlr,
 #'
 #' @return A puddlr object with dispersion calculated and stored in the
 #'         'predictor.meta' attribute.
+#'
+#' @importFrom stats mad
 #'
 #' @rdname CalculatePredictorDispersion
 #' @export CalculatePredictorDispersion
@@ -142,7 +145,7 @@ CalculatePredictorDispersion <- function(puddlr,
 #' @rdname MaskPredictors
 #' @export MaskPredictors
 #'
-MaskPredictors <- function(puddlr, cols.to.keep) {
+MaskPredictors <- function(puddlr, predictors.to.keep) {
 
     if (!"predictors" %in% attributes(puddlr)$names) {
         stop('ERROR: cannot run "CalculatePredictorDispersion" without first running "NormalizePredictors".')
@@ -153,12 +156,11 @@ MaskPredictors <- function(puddlr, cols.to.keep) {
     attr(puddlr, 'reductions') <- NULL
 
     # perform predictor selection
-    puddlr$predictors <- puddlr$predictors[,cols.to.keep]
+    puddlr$predictors <- puddlr$predictors[,predictors.to.keep]
 
     return(puddlr)
 }
 
-#'
 #' Runs PCA for linear dimensionality reduction on the predictors of a 
 #' normalized puddlr object
 #'
@@ -241,6 +243,7 @@ RunICA <- function(puddlr, nc=20) {
 #' @return puddlr object with glm
 #'
 #' @importFrom DescTools PseudoR2
+#' @importFrom stats as.formula glm pnorm vcov
 #'
 #' @rdname RunGLM
 #' @export RunGLM
@@ -299,7 +302,12 @@ RunGLM <- function(puddlr,
     return(puddlr)
 }
 
-#' ScanComponentsSubset 
+#' Iteratively runs GLM fitting on a set number of components to identify the
+#' appropriate number of dimensions to restrict the model to.  Performs k-fold
+#' cross validation to assess for overfitting with averaged root mean squared
+#' error, and pseudo-R squared (McFadden's) to assess for goodness of fit.
+#' Data for the search are saved in the puddlr object for later plotting and
+#' visual inspection
 #'
 #' @param puddlr    A puddlr object
 #' @param n.to.scan.vec Vector of possible values for n.components to scan for
@@ -323,6 +331,7 @@ RunGLM <- function(puddlr,
 #' @return puddlr object with scanned n components by rsq plot.
 #'
 #' @importFrom caret trainControl
+#' @importFrom stats predict
 #'
 #' @rdname ScanComponentsSubset
 #' @export ScanComponentsSubset
@@ -432,8 +441,3 @@ ScanComponentsSubset <- function(puddlr,
     return(puddlr)
 }
 
-################################################################################
-## Methods
-################################################################################
-
-# not yet written
