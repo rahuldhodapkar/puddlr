@@ -165,8 +165,6 @@ MaskPredictors <- function(puddlr, predictors.to.keep) {
 #' normalized puddlr object
 #'
 #' @param puddlr    A puddlr object
-#' @param center    whether to zero-center
-#' @param scale     whether to center data to unit variance
 #'
 #' @return puddlr object with pca reduction
 #'
@@ -175,8 +173,13 @@ MaskPredictors <- function(puddlr, predictors.to.keep) {
 #' @rdname RunPCA
 #' @export RunPCA
 #'
-RunPCA <- function(puddlr, center=TRUE, scale=TRUE) {
-    pca <- prcomp(x=puddlr$predictors, center = center, scale = scale)
+RunPCA <- function(puddlr) {
+    
+    if (!"predictors" %in% attributes(puddlr)$names) {
+        stop('ERROR: cannot run "RunPCA" without first running "NormalizePredictors".')
+    }
+
+    pca <- prcomp(x=puddlr$predictors)
 
     if (is.null(puddlr$reductions)) {
         puddlr$reductions <- list()
