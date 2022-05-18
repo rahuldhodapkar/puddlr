@@ -258,6 +258,20 @@ RunGLM <- function(puddlr,
                    n.components,
                    adj.rsq=FALSE) {
 
+    if(family$family == 'binomial') {
+        # McFadden's Pseudo-R2
+        rsq.function <- function(obj) {
+            return(PseudoR2(obj, which='McFadden'))
+        }
+    } else if (family$family == 'gaussian') {
+        # True R2
+        rsq.function <- function(obj) {
+            1 - obj$deviance / obj$null.deviance 
+        }
+    } else {
+        stop(paste0('ERROR: invalid family (', family$family, ') passed to "RunGLM".'))
+    }
+
     response.var.name <- all.vars(formula)[1]
 
     data.df <- data.frame(puddlr$reductions[[reduction]]$embedding[,1:n.components])
@@ -271,7 +285,7 @@ RunGLM <- function(puddlr,
       data = data.df
     )
 
-    puddlr$model$rsq <- PseudoR2(puddlr$model$obj, which='McFadden')
+    puddlr$model$rsq <- rsq.function(puddlr$model$obj)
 
     # project back to original feature space
     sum.feature.estimate <- (
